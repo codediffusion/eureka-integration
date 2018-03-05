@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.client.RestTemplate;
 import servicea.app.ServiceA;
@@ -23,12 +24,11 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 
 
 @SpringBootTest(classes = {ServiceB.class}, webEnvironment = RANDOM_PORT)
+@TestPropertySource("classpath:serviceb.properties")
 @RunWith(SpringJUnit4ClassRunner.class)
 public class EurekaIntegrationTest {
 
     private int serverPort;
-
-    private RestTemplate restTemplate = new RestTemplate();
 
     @Autowired
     private Executor executor;
@@ -43,20 +43,16 @@ public class EurekaIntegrationTest {
 
     @Before
     public void setup(){
-        //Start stubbed PCM application.
+        //Start service A.
         ConfigurableApplicationContext ctx = new SpringApplicationBuilder(ServiceA.class)
-                .properties("spring.config.location: classpath:stubbedPcmApp.properties", "server.port: 0")
+                .properties("spring.config.location: classpath:servicea.properties", "server.port: 0")
                 .build().run();
         serverPort = Integer.valueOf(ctx.getEnvironment().getProperty("local.server.port"));
     }
 
     @Test
-    public void pcmToolWithEureka_successNonInteractive() throws IllegalAccessException, IOException, InstantiationException {
-        String endpoint = "http://localhost:" + serverPort;
-
-        executor.execute("John");
-
-        String response = restTemplate.getForObject(endpoint + "/greeting?name=John", String.class);
+    public void execute_success() throws IllegalAccessException, IOException, InstantiationException {
+        String response = executor.execute("John");
 
         assertNotNull(response);
         assertEquals("Hello, John", response);

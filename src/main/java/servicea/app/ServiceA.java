@@ -2,6 +2,7 @@ package servicea.app;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.context.annotation.Import;
 import servicea.config.ServiceAAppConfig;
 
@@ -9,6 +10,7 @@ import servicea.config.ServiceAAppConfig;
  * Created by rd on 26/02/18.
  */
 @SpringBootApplication
+@EnableDiscoveryClient
 @Import(ServiceAAppConfig.class)
 public class ServiceA {
 
