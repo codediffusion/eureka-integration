@@ -1,37 +1,37 @@
 package integration;
 
+import com.netflix.discovery.EurekaClient;
+import com.netflix.discovery.shared.Application;
 import eureka.EurekaServer;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.web.client.RestTemplate;
 import servicea.app.ServiceA;
 import serviceb.app.Executor;
 import serviceb.app.ServiceB;
 
 import java.io.IOException;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 
-@SpringBootTest(classes = {ServiceB.class}, webEnvironment = RANDOM_PORT)
-@TestPropertySource("classpath:serviceb.properties")
+@SpringBootTest(classes = {ServiceA.class}, webEnvironment = RANDOM_PORT)
+@TestPropertySource("classpath:servicea.properties")
 @RunWith(SpringJUnit4ClassRunner.class)
 public class EurekaIntegrationTest {
 
-    private int serverPort;
-
-    @Autowired
     private Executor executor;
+
+    private EurekaClient eurekaClient;
 
     @BeforeClass
     public static void beforeClass(){
@@ -42,20 +42,39 @@ public class EurekaIntegrationTest {
     }
 
     @Before
-    public void setup(){
-        //Start service A.
-        ConfigurableApplicationContext ctx = new SpringApplicationBuilder(ServiceA.class)
-                .properties("spring.config.location: classpath:servicea.properties", "server.port: 0")
+    public void setup() {
+        //Start service B.
+        ConfigurableApplicationContext ctx = new SpringApplicationBuilder(ServiceB.class)
+                .properties("spring.config.location: classpath:serviceb.properties", "server.port: 0")
                 .build().run();
-        serverPort = Integer.valueOf(ctx.getEnvironment().getProperty("local.server.port"));
+        executor = ctx.getBean(Executor.class);
+        eurekaClient = ctx.getBean(EurekaClient.class);
     }
 
     @Test
-    public void execute_success() throws IllegalAccessException, IOException, InstantiationException {
+    public void execute_success() throws IllegalAccessException, IOException, InstantiationException, InterruptedException {
+
+        verifyEurekaRegistration();
+
         String response = executor.execute("John");
 
         assertNotNull(response);
         assertEquals("Hello, John", response);
+    }
+
+    private void verifyEurekaRegistration() throws InterruptedException {
+        Application application = null;
+        for(int count = 1; count <= 20; count++){
+            if(null != eurekaClient.getApplication("SERVICE-A")){
+                application = eurekaClient.getApplication("SERVICE-A");
+                break;
+            }
+            Thread.sleep(2000L);
+        }
+
+        if(application == null){
+            throw new RuntimeException("Service registration timed out");
+        }
     }
 
 }

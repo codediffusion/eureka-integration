@@ -1,5 +1,7 @@
 package serviceb.app;
 
+import com.netflix.discovery.EurekaClient;
+import com.netflix.discovery.shared.Application;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
@@ -14,7 +16,7 @@ import java.util.List;
 public class Executor {
 
     @Autowired
-    private DiscoveryClient discoveryClient;
+    private EurekaClient eurekaClient;
 
     private RestTemplate restTemplate;
 
@@ -23,10 +25,9 @@ public class Executor {
     }
 
     public String execute(String name){
-        List<ServiceInstance> serviceInstanceList = discoveryClient.getInstances("SERVICE-A");
-        String host = serviceInstanceList.get(0).getHost();
-        int port = serviceInstanceList.get(0).getPort();
-        String url = host + ":" + port;
-        return restTemplate.getForObject(url + "/greeting?name=" + name, String.class);
+        Application application = eurekaClient.getApplication("SERVICE-A");
+
+        String homepageUrl = application.getInstances().get(0).getHomePageUrl();
+        return restTemplate.getForObject(homepageUrl + "/greeting?name=" + name, String.class);
     }
 }
